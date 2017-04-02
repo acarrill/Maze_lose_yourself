@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Draw cube with specification of face color</title>
+  </head>
+
+  <body onload="main()">
+		<div style="position: relative;">
+		 <canvas id="webgl" width="400" height="400"
+		   style="position: absolute; left: 0; top: 0; z-index: 0;"></canvas>
+		 <canvas id="2d" width="400" height="400"
+		   style="position: absolute; left: 0; top: 0; z-index: 1;"></canvas>
+		</div>
+
+    <script src="lib/webgl-utils.js"></script>
+    <script src="lib/webgl-debug.js"></script>
+    <script src="lib/cuon-utils.js"></script>
+    <script src="lib/cuon-matrix.js"></script>
+		<script src="maze.js"></script>
+    <script src="MazeExample.js"></script>
+  </body>
+</html>
