@@ -8,9 +8,7 @@ var my_maze_array = [];
 var my_maze_size;
 
 var camera;
-var crashed = false;
 var soundtrack;
-
 
 var VSHADER_SOURCE =
     'attribute highp vec3 a_VertexPosition;\n' +
@@ -25,9 +23,9 @@ var VSHADER_SOURCE =
     '  gl_Position = u_MvpMatrix * vec4(a_VertexPosition, 1.0);\n' +
     '  v_TextureCoord = a_TextureCoord;\n' +
 
-    '  highp vec3 ambientLight = vec3(0.0, 0.3, 0.3);\n' +
-    '  highp vec3 directionalLightColor = vec3(0.0, 0.4, 0.4);\n' +
-    '  highp vec3 pointLightPosition = vec3(1.0, -20.0, 10.0);\n' +
+    '  highp vec3 ambientLight = vec3(0.35, 0.35, 0.35);\n' +
+    '  highp vec3 directionalLightColor = vec3(0.35, 0.35, 0.35);\n' +
+    '  highp vec3 pointLightPosition = vec3(-5.0, -0.0, -10.0);\n' +
 
     '  vec4 vertexPosition = u_ModelMatrix * vec4(a_VertexPosition, 1.0);\n' +
     '  highp vec3 lightDirection = normalize(pointLightPosition - vec3(vertexPosition));\n' +
@@ -50,64 +48,95 @@ var FSHADER_SOURCE =
 function startGL() {
     //Creamos Interfaz para la cámara y le añadimos dos handlers para el teclado
     camera = new ViewControl();
-    soundtrack = new Sound("Zelda_Templo.mp3");
+    soundtrack = new Sound("Castle_SuperMario64.mp3");
     //soundtrack.play();
-    camera.keyHandlerChangeView = function(event) {
+    camera.keyHandlerMove = function(event) {
         switch(event.key) {
-            case "ArrowUp":
-                camera.speed = 0.10;
+            case "w":
                 console.log("actual:",camera.x, camera.y)
+                camera.speed = 0.05;
+                //camera.move(camera.speed);
+                camera.y -= camera.speed * Math.sin(camera.yaw);
+                camera.x += camera.speed * Math.cos(camera.yaw);
+                var validTotal = validPosition(camera.x,camera.y);
+
+                if (validTotal) {
+                    console.log("wwww")
+                    camera.speed = -0.05;
+                    camera.move(camera.speed);
+                }
+
+                break;
+            case "s":
+                camera.speed = -0.05;
                 camera.move(camera.speed);
                 if (!validPosition(camera.x,camera.y)) {
-                    camera.speed = -0.10;
+                    camera.speed = 0.05;
                     camera.move(camera.speed);
                 }
-                break;
-            case "ArrowDown":
-            camera.speed = -0.10;
-            camera.move(camera.speed);
-                if (!validPosition(camera.x,camera.y)) {
-                    camera.speed = 0.10;
-                    camera.move(camera.speed);
-                }
-                break;
-            case "ArrowLeft":
-                camera.moveAngle = -3.5;
-                camera.rote(camera.moveAngle);
-                break;
-            case "ArrowRight":
-                camera.moveAngle = 3.5;
-                camera.rote(camera.moveAngle);
                 break;
             default:
                 console.log("Key not handled");
           }
       }
-      document.addEventListener("keydown", camera.keyHandlerChangeView, false);
+      //Escuchamos en el canvas para obtener las coordenadas del raton
+      var canvas = document.getElementById('webgl');
+      canvas.addEventListener("mousemove", function(evt){
+          camera.xPos = Math.round(evt.clientX);
+          camera.yPos = Math.round(evt.clientY);
+      }, false);
+      //Control de encendido por click
+      canvas.onmousedown = function(){camera.mouseCameraOn = true};
+      canvas.onmouseup = function(){camera.mouseCameraOn = false};
+      function mouseViewControl() {
+          if (camera.mouseCameraOn){
+              camera.xOffset = camera.xPos - camera.middleXPos;
+              camera.yOffset = camera.middleYPos - camera.yPos; // al reves para coordenadas de abajo arriba
+              camera.xOffset *= camera.sensitivity;
+              camera.yOffset *= camera.sensitivity;
+              camera.pitch += camera.yOffset;
+              camera.yaw += camera.xOffset;
+              camera.rote()
+          }
+
+      }
+      camera.mouseInterval = setInterval(mouseViewControl, 17);
+
+      document.addEventListener("keydown", camera.keyHandlerMove, false);
       main();
 }
 
 //Constructor control de camara
 function ViewControl() {
       //Interfaz de parámetros y método que usaremos para crear y controlar la camara/vista
-      this.angle = 0.0;
-      this.moveAngle = 0.0;
       this.y = 0.0;
       this.x = 0.0;
       this.vectorY = 0.061;
       this.vectorX = 0.998;
+      this.vectorZ = 0;
       this.speed = 0.5;
       this.left = 0;
       this.right = 0;
+      //parámetros en caso de control de cámara por mouse
+      this.middleXPos = 500; //middle inicializado al centro del canvas
+      this.middleYPos = 300;
+      this.xPos = 0;
+      this.yPos = 0;
+      this.xOffset = 0;
+      this.yOffset = 0;
+      this.sensitivity = 0.000035;
+      this.pitch = 0;
+      this.yaw = 0;
+      this.mouseCameraOn = false;
       this.move = function(speed) {
           this.speed = speed;
-          this.x += this.speed * Math.cos(this.angle);
-          this.y -= this.speed * Math.sin(this.angle);
+          this.x += this.speed * Math.cos(this.yaw);
+          this.y -= this.speed * Math.sin(this.yaw);
       }
-      this.rote = function(moveAngle) {
-          this.angle += this.moveAngle * Math.PI / 180;
-          this.vectorX = Math.cos(-this.angle);
-          this.vectorY = Math.sin(-this.angle);
+      this.rote = function() {
+          this.vectorX = Math.cos(this.pitch) * Math.cos(this.yaw);
+          this.vectorY = Math.cos(this.pitch) * Math.sin(-this.yaw); //seno es impar
+          this.vectorZ = Math.sin(this.pitch)
       }
 }
 
@@ -142,7 +171,7 @@ function validPosition(x, y) {
         }
     }
     */
-    return valid;
+    return !valid;
 }
 
 //Contructor que contiene matrices modelos y contruye los buffer de los objetos del mapa
@@ -236,19 +265,19 @@ function main() {
         return;
     }
     if (gl) {
-        gl.clearColor(0.0, 0.0, 0.1, 1.0);  // Clear to black, fully opaque
+        gl.clearColor(0.1, 0.1, 0.1, 0.6);  // Clear to black, fully opaque
         gl.clearDepth(1.0);                 // Clear everything
         gl.enable(gl.DEPTH_TEST);           // Enable depth testing
         gl.depthFunc(gl.LEQUAL);            // Near things obscure far things
 
         //INICIALIZACION DE CONSTRUCTOR MODELO PARA UN CUBO
         var cubeVertices = new Float32Array([
-            -1.0, -1.0,  1.0,  1.0, -1.0,  1.0,  1.0,  1.0,  1.0, -1.0,  1.0,  1.0,   // Front face
-            -1.0, -1.0, -1.0, -1.0,  1.0, -1.0,  1.0,  1.0, -1.0,  1.0, -1.0, -1.0,   // Back face
-            -1.0,  1.0, -1.0, -1.0,  1.0,  1.0,  1.0,  1.0,  1.0,  1.0,  1.0, -1.0,   // Top face
-            -1.0, -1.0, -1.0,  1.0, -1.0, -1.0,  1.0, -1.0,  1.0, -1.0, -1.0,  1.0,   // Bottom face
-             1.0, -1.0, -1.0,  1.0,  1.0, -1.0,  1.0,  1.0,  1.0,  1.0, -1.0,  1.0,   // Right face
-            -1.0, -1.0, -1.0, -1.0, -1.0,  1.0, -1.0,  1.0,  1.0, -1.0,  1.0, -1.0    // Left face
+            -1.0, -1.0,  1.0,   1.0, -1.0,  1.0,   1.0,  1.0,  1.0,  -1.0,  1.0,  1.0,   // Front face
+            -1.0, -1.0, -1.0,  -1.0,  1.0, -1.0,   1.0,  1.0, -1.0,   1.0, -1.0, -1.0,   // Back face
+            -1.0,  1.0, -1.0,  -1.0,  1.0,  1.0,   1.0,  1.0,  1.0,   1.0,  1.0, -1.0,   // Top face
+            -1.0, -1.0, -1.0,   1.0, -1.0, -1.0,   1.0, -1.0,  1.0,  -1.0, -1.0,  1.0,   // Bottom face
+             1.0, -1.0, -1.0,   1.0,  1.0, -1.0,   1.0,  1.0,  1.0,   1.0, -1.0,  1.0,   // Right face
+            -1.0, -1.0, -1.0,  -1.0, -1.0,  1.0, - 1.0,  1.0,  1.0,  -1.0,  1.0, -1.0    // Left face
         ]);
         var cubeVertexIndices =  new Uint16Array([
             0,  1,  2,      0,  2,  3,    // front
@@ -276,7 +305,7 @@ function main() {
         ]);
         var cube = new ModelConstructor(cubeVertices, cubeVertexIndices, cubeTextureCoordinates, cubeVertexNormals);
         cube.numElements = 36;
-        cube.image.src = "resources/muro-musgo.jpg";
+        cube.image.src = "resources/marmolwall.jpg";
         cube.initTextures();
 
         //INICIALIZACION DE CONSTRUCTOR MODELO PARA EL SUELO
@@ -322,7 +351,7 @@ function main() {
         var vMatrix   = new Matrix4();
         var pMatrix   = new Matrix4();
         var mvpMatrix = new Matrix4();
-        var t = false;
+        //var t = false;
         /*
         t =
          document.onkeydown = function(a){
@@ -334,9 +363,9 @@ function main() {
         */
         mMatrix = cube.mMatrix;
         pMatrix.setPerspective(50, 1, 0.4, 100);
-        vMatrix.lookAt(camera.x, camera.y, 0.002, camera.x + camera.vectorX, camera.y + camera.vectorY, 0.002, 0, 0, 1);
+        vMatrix.lookAt(camera.x, camera.y, -0.1, camera.x + camera.vectorX, camera.y + camera.vectorY, 0.002 + camera.vectorZ, 0, 0, 1);
         //vMatrix.lookAt(camera.x, camera.y, 50, camera.x + camera.vectorX, camera.y + camera.vectorY,-100, 0, 1, 0);
-        mMatrix.translate(20.0, 0.0, 0.0).rotate(cubeRotation, 0, 0, 1).rotate(cubeRotation, 0, 1, 0);
+        //mMatrix.translate(20.0, 0.0, 0.0).rotate(cubeRotation, 0, 0, 1).rotate(cubeRotation, 0, 1, 0);
         mvpMatrix.set(pMatrix).multiply(vMatrix).multiply(mMatrix);
         cube.referBuffer();
 
@@ -374,7 +403,7 @@ function main() {
             cubeRotation += (30 * delta) / 1000.0;
         }
         lastCubeUpdateTime = currentTime;
-
+        //Actualizamos posición en el mapa
         my_maze.pos.x = Math.floor(camera.x);
     	my_maze.pos.y = Math.floor(camera.y);
     	my_maze.draw(ctx_2d, 0, 0, 5, 0);
