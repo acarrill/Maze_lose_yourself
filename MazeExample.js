@@ -4,11 +4,6 @@ var lastCubeUpdateTime = 0;
 
 var gl;
 
-var my_maze_array = [];
-var my_maze_size;
-
-var camera;
-var soundtrack;
 
 var VSHADER_SOURCE =
     'attribute highp vec3 a_VertexPosition;\n' +
@@ -45,72 +40,11 @@ var FSHADER_SOURCE =
     '  gl_FragColor = vec4(texelColor.rgb * v_Lighting, texelColor.a);\n' +
     '}\n';
 
-function startGL() {
-    //Creamos Interfaz para la cámara y le añadimos dos handlers para el teclado
-    camera = new ViewControl();
-    soundtrack = new Sound("Castle_SuperMario64.mp3");
-    //soundtrack.play();
-    camera.keyHandlerMove = function(event) {
-        switch(event.key) {
-            case "w":
-                console.log("actual:",camera.x, camera.y)
-                camera.speed = 0.05;
-                //camera.move(camera.speed);
-                camera.y -= camera.speed * Math.sin(camera.yaw);
-                camera.x += camera.speed * Math.cos(camera.yaw);
-                var validTotal = validPosition(camera.x,camera.y);
-
-                if (validTotal) {
-                    console.log("wwww")
-                    camera.speed = -0.05;
-                    camera.move(camera.speed);
-                }
-
-                break;
-            case "s":
-                camera.speed = -0.05;
-                camera.move(camera.speed);
-                if (!validPosition(camera.x,camera.y)) {
-                    camera.speed = 0.05;
-                    camera.move(camera.speed);
-                }
-                break;
-            default:
-                console.log("Key not handled");
-          }
-      }
-      //Escuchamos en el canvas para obtener las coordenadas del raton
-      var canvas = document.getElementById('webgl');
-      canvas.addEventListener("mousemove", function(evt){
-          camera.xPos = Math.round(evt.clientX);
-          camera.yPos = Math.round(evt.clientY);
-      }, false);
-      //Control de encendido por click
-      canvas.onmousedown = function(){camera.mouseCameraOn = true};
-      canvas.onmouseup = function(){camera.mouseCameraOn = false};
-      function mouseViewControl() {
-          if (camera.mouseCameraOn){
-              camera.xOffset = camera.xPos - camera.middleXPos;
-              camera.yOffset = camera.middleYPos - camera.yPos; // al reves para coordenadas de abajo arriba
-              camera.xOffset *= camera.sensitivity;
-              camera.yOffset *= camera.sensitivity;
-              camera.pitch += camera.yOffset;
-              camera.yaw += camera.xOffset;
-              camera.rote()
-          }
-
-      }
-      camera.mouseInterval = setInterval(mouseViewControl, 17);
-
-      document.addEventListener("keydown", camera.keyHandlerMove, false);
-      main();
-}
-
 //Constructor control de camara
 function ViewControl() {
       //Interfaz de parámetros y método que usaremos para crear y controlar la camara/vista
-      this.y = 0.0;
-      this.x = 0.0;
+      this.yPos = 0.0;
+      this.xPos = 0.0;
       this.vectorY = 0.061;
       this.vectorX = 0.998;
       this.vectorZ = 0;
@@ -120,8 +54,8 @@ function ViewControl() {
       //parámetros en caso de control de cámara por mouse
       this.middleXPos = 500; //middle inicializado al centro del canvas
       this.middleYPos = 300;
-      this.xPos = 0;
-      this.yPos = 0;
+      this.xMousePos = 0;
+      this.yMousePos = 0;
       this.xOffset = 0;
       this.yOffset = 0;
       this.sensitivity = 0.000035;
@@ -130,8 +64,8 @@ function ViewControl() {
       this.mouseCameraOn = false;
       this.move = function(speed) {
           this.speed = speed;
-          this.x += this.speed * Math.cos(this.yaw);
-          this.y -= this.speed * Math.sin(this.yaw);
+          this.xPos += this.speed *this.vectorX;
+          this.yPos += this.speed * this.vectorY;
       }
       this.rote = function() {
           this.vectorX = Math.cos(this.pitch) * Math.cos(this.yaw);
@@ -155,23 +89,6 @@ function Sound(src) {
       this.stop = function(){
           this.Sound.pause();
       }
-}
-
-//Control de choques
-function validPosition(x, y) {
-    //console.log(x,y)
-    //console.log()
-    var valid = (my_maze_array[Math.round(x)][Math.round(y)]);
-    /*
-    for(i = 0; i < my_maze_size; i++){
-        posArray2D = (my_maze_array[i][0], my_maze_array[i][1]);
-        console.log(my_maze_array[i][0]);
-        if((Math.round(x) === posArray2D[0]) && (Math.round(y) === posArray2D[1])){
-            var valid = false;
-        }
-    }
-    */
-    return !valid;
 }
 
 //Contructor que contiene matrices modelos y contruye los buffer de los objetos del mapa
@@ -239,15 +156,20 @@ function ModelConstructor(vertices, indexs, textureCoor, vertexNormals) {
 }
 
 function main() {
+    var camera = new ViewControl();
+    var soundtrack = new Sound("Castle_SuperMario64.mp3");
+
     var canvas = document.getElementById('webgl');
 	var canvas2d = document.getElementById('2d');
 	var ctx_2d = canvas2d.getContext("2d");
 
-	my_maze = new Maze(MAZESZ);
+    var my_maze_array = [];
+    var my_maze_size;
+	var my_maze = new Maze(MAZESZ);
     my_maze.randPrim(new Pos(0, 0));
 	//my_maze.determ(new Pos(0, 0));
-	my_maze.pos.x = camera.x;
-	my_maze.pos.y = camera.y;
+	my_maze.pos.x = camera.xPos;
+	my_maze.pos.y = camera.yPos;
 	my_maze.draw(ctx_2d, 0, 0, 5, 0);
     my_maze_array = my_maze.rooms;
     my_maze_size = my_maze.sz;
@@ -264,6 +186,82 @@ function main() {
         console.log('Failed to intialize shaders.');
         return;
     }
+    //Función donde se realiza todo el control de la cámara, mouse y audio
+
+
+    //Control de choques
+    function validPosition(x, y) {
+        //console.log(x,y)
+        //console.log()
+        var valid = (my_maze_array[Math.round(x)][Math.round(y)]);
+        /*
+        for(i = 0; i < my_maze_size; i++){
+            posArray2D = (my_maze_array[i][0], my_maze_array[i][1]);
+            console.log(my_maze_array[i][0]);
+            if((Math.round(x) === posArray2D[0]) && (Math.round(y) === posArray2D[1])){
+                var valid = false;
+            }
+        }
+        */
+        return !valid;
+    }
+
+
+    (function startCamera() {
+        //soundtrack.play();
+        camera.keyHandlerMove = function(event) {
+            switch(event.key) {
+                case "w":
+                    console.log("actual:",camera.xPos, camera.yPos)
+                    camera.speed = 0.05;
+                    camera.move(camera.speed);
+
+                    var validTotal = validPosition(camera.xPos,camera.yPos);
+
+                    if (validX && validY) {
+                        console.log("wwww")
+                        camera.speed = -0.05;
+                        camera.move(camera.speed);
+                    }
+
+                    break;
+                case "s":
+                    camera.speed = -0.05;
+                    camera.move(camera.speed);
+                    if (!validPosition(camera.xPos,camera.yPos)) {
+                        camera.speed = 0.05;
+                        camera.move(camera.speed);
+                    }
+                    break;
+                default:
+                    console.log("Key not handled");
+              }
+          }
+          //Escuchamos en el canvas para obtener las coordenadas del raton
+          canvas.addEventListener("mousemove", function(evt){
+              camera.xMousePos = Math.round(evt.clientX);
+              camera.yMousePos = Math.round(evt.clientY);
+          }, false);
+          //Control de encendido por click
+          canvas.onmousedown = function(){camera.mouseCameraOn = true};
+          canvas.onmouseup = function(){camera.mouseCameraOn = false};
+          function mouseViewControl() {
+              if (camera.mouseCameraOn){
+                  camera.xOffset = camera.xMousePos - camera.middleXPos;
+                  camera.yOffset = camera.middleYPos - camera.yMousePos; // al reves para coordenadas de abajo arriba
+                  camera.xOffset *= camera.sensitivity;
+                  camera.yOffset *= camera.sensitivity;
+                  camera.pitch += camera.yOffset;
+                  camera.yaw += camera.xOffset;
+                  camera.rote()
+              }
+
+          }
+          camera.mouseInterval = setInterval(mouseViewControl, 17);
+
+          document.addEventListener("keydown", camera.keyHandlerMove, false);
+      })()
+
     if (gl) {
         gl.clearColor(0.1, 0.1, 0.1, 0.6);  // Clear to black, fully opaque
         gl.clearDepth(1.0);                 // Clear everything
@@ -363,8 +361,8 @@ function main() {
         */
         mMatrix = cube.mMatrix;
         pMatrix.setPerspective(50, 1, 0.4, 100);
-        vMatrix.lookAt(camera.x, camera.y, -0.1, camera.x + camera.vectorX, camera.y + camera.vectorY, 0.002 + camera.vectorZ, 0, 0, 1);
-        //vMatrix.lookAt(camera.x, camera.y, 50, camera.x + camera.vectorX, camera.y + camera.vectorY,-100, 0, 1, 0);
+        vMatrix.lookAt(camera.xPos, camera.yPos, -0.1, camera.xPos + camera.vectorX, camera.yPos + camera.vectorY, 0.002 + camera.vectorZ, 0, 0, 1);
+        //vMatrix.lookAt(camera.xPos, camera.yPos, 50, camera.xPos + camera.vectorX, camera.yPos + camera.vectorY,-100, 0, 1, 0);
         //mMatrix.translate(20.0, 0.0, 0.0).rotate(cubeRotation, 0, 0, 1).rotate(cubeRotation, 0, 1, 0);
         mvpMatrix.set(pMatrix).multiply(vMatrix).multiply(mMatrix);
         cube.referBuffer();
@@ -404,8 +402,8 @@ function main() {
         }
         lastCubeUpdateTime = currentTime;
         //Actualizamos posición en el mapa
-        my_maze.pos.x = Math.floor(camera.x);
-    	my_maze.pos.y = Math.floor(camera.y);
+        my_maze.pos.x = Math.floor(camera.xPos);
+    	my_maze.pos.y = Math.floor(camera.yPos);
     	my_maze.draw(ctx_2d, 0, 0, 5, 0);
         requestAnimationFrame(drawScene);
     }
