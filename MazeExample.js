@@ -52,13 +52,13 @@ function ViewControl() {
       this.left = 0;
       this.right = 0;
       //parámetros en caso de control de cámara por mouse
-      this.middleXPos = 500; //middle inicializado al centro del canvas
+      this.middleXPos = 400; //middle inicializado al centro del canvas
       this.middleYPos = 300;
       this.xMousePos = 0;
       this.yMousePos = 0;
       this.xOffset = 0;
       this.yOffset = 0;
-      this.sensitivity = 0.000035;
+      this.sensitivity = 0.000075;
       this.pitch = 0;
       this.yaw = 0;
       this.mouseCameraOn = false;
@@ -160,6 +160,7 @@ function main() {
     var soundtrack = new Sound("Castle_SuperMario64.mp3");
 
     var canvas = document.getElementById('webgl');
+
 	var canvas2d = document.getElementById('2d');
 	var ctx_2d = canvas2d.getContext("2d");
 
@@ -193,7 +194,7 @@ function main() {
     function validPosition(x, y) {
         //console.log(x,y)
         //console.log()
-        var valid = (my_maze_array[Math.round(x)][Math.round(y)]);
+        var valid = (my_maze_array[Math.floor(x)][Math.floor(y)]);
         /*
         for(i = 0; i < my_maze_size; i++){
             posArray2D = (my_maze_array[i][0], my_maze_array[i][1]);
@@ -209,6 +210,9 @@ function main() {
 
     (function startCamera() {
         //soundtrack.play();
+        //reajustamos el centro del canvas (nuestra referencia para el mouse)
+        var canvasPos = canvas.getBoundingClientRect();
+        camera.middleXPos += canvasPos.left;
         camera.keyHandlerMove = function(event) {
             switch(event.key) {
                 case "w":
@@ -218,9 +222,9 @@ function main() {
 
                     var validTotal = validPosition(camera.xPos,camera.yPos);
 
-                    if (validX && validY) {
+                    if (validTotal) {
                         console.log("wwww")
-                        camera.speed = -0.05;
+                        camera.speed = -0.15;
                         camera.move(camera.speed);
                     }
 
