@@ -1,9 +1,5 @@
 
-var cubeRotation = 0.0;
-var lastCubeUpdateTime = 0;
-
 var gl;
-
 
 var VSHADER_SOURCE =
     'attribute highp vec3 a_VertexPosition;\n' +
@@ -48,7 +44,7 @@ function ViewControl() {
       this.vectorY = 0.061;
       this.vectorX = 0.998;
       this.vectorZ = 0;
-      this.speed = 0.5;
+      this.speed = 0.035;
       this.left = 0;
       this.right = 0;
       //parámetros en caso de control de cámara por mouse
@@ -60,12 +56,12 @@ function ViewControl() {
       this.yOffset = 0;
       this.sensitivity = 0.000075;
       this.pitch = 0;
+      this.maxPitch = Math.PI/2-0.2; //Algo menos que 90 grados
       this.yaw = 0;
       this.mouseCameraOn = false;
       this.move = function(speed) {
-          this.speed = speed;
-          this.xPos += this.speed *this.vectorX;
-          this.yPos += this.speed * this.vectorY;
+          this.xPos += speed * this.vectorX;
+          this.yPos += speed * this.vectorY;
       }
       this.rote = function() {
           this.vectorX = Math.cos(this.pitch) * Math.cos(this.yaw);
@@ -169,13 +165,16 @@ function main() {
 	var my_maze = new Maze(MAZESZ);
     my_maze.randPrim(new Pos(0, 0));
 	//my_maze.determ(new Pos(0, 0));
+    my_maze_array = my_maze.rooms;
+    my_maze_size = my_maze.sz;
+    do{ //Posición de inicio aleatoria
+        camera.xPos = (Math.floor(Math.random() * (my_maze_size-5)) + 5);
+        camera.yPos = (Math.floor(Math.random() * (my_maze_size-5)) + 5);
+    }while (!my_maze_array[camera.xPos][camera.yPos]);
 	my_maze.pos.x = camera.xPos;
 	my_maze.pos.y = camera.yPos;
 	my_maze.draw(ctx_2d, 0, 0, 5, 0);
-    my_maze_array = my_maze.rooms;
-    my_maze_size = my_maze.sz;
 
-    console.log(my_maze.pos);
 
     gl = getWebGLContext(canvas);
     if (!gl) {
@@ -187,10 +186,13 @@ function main() {
         console.log('Failed to intialize shaders.');
         return;
     }
-    //Función donde se realiza todo el control de la cámara, mouse y audio
-
-
+    //Funciónes donde se realiza todo el control de la cámara, mouse y audio
     //Control de choques
+<<<<<<< HEAD
+    function notValidPosition(x, y) {
+        var notValid = !(my_maze_array[Math.floor(x)][Math.floor(y)]);
+        return notValid;
+=======
     function validPosition(x, y) {
         //console.log(x,y)
         //console.log()
@@ -205,20 +207,30 @@ function main() {
         }
         */
         return !valid;
+>>>>>>> d2a1667c84c25f008d61dd87f59cc99baab085c4
     }
-
-
+    //Main control
     (function startCamera() {
+<<<<<<< HEAD
+        soundtrack.play();
+=======
         //soundtrack.play();
         //reajustamos el centro del canvas (nuestra referencia para el mouse)
+>>>>>>> d2a1667c84c25f008d61dd87f59cc99baab085c4
         var canvasPos = canvas.getBoundingClientRect();
         camera.middleXPos += canvasPos.left;
         camera.keyHandlerMove = function(event) {
             switch(event.key) {
                 case "w":
                     console.log("actual:",camera.xPos, camera.yPos)
-                    camera.speed = 0.05;
                     camera.move(camera.speed);
+<<<<<<< HEAD
+                    var notValidW = notValidPosition(camera.xPos,camera.yPos);
+                    if (notValidW) {
+                        console.log("wwww")
+                        var speed = -0.15;
+                        camera.move(speed);
+=======
 
                     var validTotal = validPosition(camera.xPos,camera.yPos);
 
@@ -226,14 +238,14 @@ function main() {
                         console.log("wwww")
                         camera.speed = -0.15;
                         camera.move(camera.speed);
+>>>>>>> d2a1667c84c25f008d61dd87f59cc99baab085c4
                     }
-
                     break;
                 case "s":
-                    camera.speed = -0.05;
-                    camera.move(camera.speed);
-                    if (!validPosition(camera.xPos,camera.yPos)) {
-                        camera.speed = 0.05;
+                    camera.move(-camera.speed);
+                    var notValidS = notValidPosition(camera.xPos,camera.yPos);
+                    if (notValidS) {
+                        var speed = 0.05;
                         camera.move(camera.speed);
                     }
                     break;
@@ -249,6 +261,7 @@ function main() {
           //Control de encendido por click
           canvas.onmousedown = function(){camera.mouseCameraOn = true};
           canvas.onmouseup = function(){camera.mouseCameraOn = false};
+          //Utilizamos el input del mouse para cambiar ángulo de cámara
           function mouseViewControl() {
               if (camera.mouseCameraOn){
                   camera.xOffset = camera.xMousePos - camera.middleXPos;
@@ -257,11 +270,17 @@ function main() {
                   camera.yOffset *= camera.sensitivity;
                   camera.pitch += camera.yOffset;
                   camera.yaw += camera.xOffset;
+                  console.log(camera.pitch)
+                  if (camera.pitch > camera.maxPitch){
+                      camera.pitch = camera.maxPitch;
+                  }else if (camera.pitch < -camera.maxPitch) {
+                      camera.pitch = -camera.maxPitch;
+                  }
                   camera.rote()
               }
 
           }
-          camera.mouseInterval = setInterval(mouseViewControl, 17);
+          camera.mouseInterval = setInterval(mouseViewControl, 15);
 
           document.addEventListener("keydown", camera.keyHandlerMove, false);
       })()
@@ -353,24 +372,17 @@ function main() {
         var vMatrix   = new Matrix4();
         var pMatrix   = new Matrix4();
         var mvpMatrix = new Matrix4();
-        //var t = false;
-        /*
-        t =
-         document.onkeydown = function(a){
-                    console.log(a)
-                    if (a.key == "t"){
-                        return true;
-                    }
-                };
-        */
+
         mMatrix = cube.mMatrix;
-        pMatrix.setPerspective(50, 1, 0.4, 100);
-        vMatrix.lookAt(camera.xPos, camera.yPos, -0.1, camera.xPos + camera.vectorX, camera.yPos + camera.vectorY, 0.002 + camera.vectorZ, 0, 0, 1);
-        //vMatrix.lookAt(camera.xPos, camera.yPos, 50, camera.xPos + camera.vectorX, camera.yPos + camera.vectorY,-100, 0, 1, 0);
-        //mMatrix.translate(20.0, 0.0, 0.0).rotate(cubeRotation, 0, 0, 1).rotate(cubeRotation, 0, 1, 0);
+        pMatrix.setPerspective(60, 1, 0.0001, 100);
+        vMatrix.lookAt(camera.xPos, camera.yPos, -0.1, camera.xPos + camera.vectorX,
+                        camera.yPos + camera.vectorY, 0.002 + camera.vectorZ,
+                        0, 0, 1);
+
         mvpMatrix.set(pMatrix).multiply(vMatrix).multiply(mMatrix);
         cube.referBuffer();
 
+        //Dirección luz
         var normalMatrix = new Matrix4();
         normalMatrix.set(mMatrix);
         normalMatrix.invert();
@@ -398,13 +410,7 @@ function main() {
         gl.uniformMatrix4fv(u_MvpMatrix, false, mvpMatrix.elements);
         gl.drawElements(gl.TRIANGLES, floor.numElements, gl.UNSIGNED_SHORT, 0);
 
-        var currentTime = (new Date).getTime();
-        if (lastCubeUpdateTime) {
-            var delta = currentTime - lastCubeUpdateTime;
 
-            cubeRotation += (30 * delta) / 1000.0;
-        }
-        lastCubeUpdateTime = currentTime;
         //Actualizamos posición en el mapa
         my_maze.pos.x = Math.floor(camera.xPos);
     	my_maze.pos.y = Math.floor(camera.yPos);
