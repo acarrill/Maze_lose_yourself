@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Castle maze 64</title>
+    <style>
+    body {
+      background-image: url("resources/mario1.png");
+    }
+    </style>
+  </head>
+
+  <body onload="main()">
+		<div style="position: absolute; left: 0; top: 0; z-index: 0; top: 50%;
+                    left: 50%; transform: translate(-50%, -50%);">
+            <canvas id="webgl" width="800" height="600"></canvas>
+            <canvas id="2d" width="120" height="120"
+                style="position: absolute; left: 0; top: 0px; z-index: 1"></canvas>
+		</div>
+
+    <script src="lib/webgl-utils.js"></script>
+    <script src="lib/webgl-debug.js"></script>
+    <script src="lib/cuon-utils.js"></script>
+    <script src="lib/cuon-matrix.js"></script>
+		<script src="maze.js"></script>
+    <script src="CastleMaze64.js"></script>
+  </body>
+</html>
